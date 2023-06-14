@@ -19,22 +19,40 @@ namespace BookService.Controllers.Api
         private BookServiceContext db = new BookServiceContext();
 
         // GET: api/Books
-        public IQueryable<Book> GetBooks()
+        public IQueryable<BookDto> GetBooks()
         {
-            return db.Books;
+            // Eager loading: load related entities as part of initial db query
+            //return db.Books;.Include(x => x.Author);
+
+            var books = from b in db.Books
+                        select new BookDto()
+                        {
+                            Id = b.Id,
+                            Title = b.Title,
+                            AuthorName = b.Author.Name
+                        };
+
+            return books;
         }
 
         // GET: api/Books/5
-        [ResponseType(typeof(Book))]
+        [ResponseType(typeof(BookDetailDto))]
         public async Task<IHttpActionResult> GetBook(int id)
         {
-            Book book = await db.Books.FindAsync(id);
-            if (book == null)
+            var book = await db.Books.Include(x => x.Author).Select(x =>
+            new BookDetailDto()
             {
-                return NotFound();
-            }
+                Id = x.Id,
+                Title = x.Title,
+                Year = x.Year,
+                Price = x.Price,
+                AuthorName = x.Author.Name,
+                Genre = x.Genre
+            }).SingleOrDefaultAsync(x => x.Id == id);
 
-            return Ok(book);
+            return book == null 
+                ? NotFound() 
+                : Ok(book);
         }
 
         // PUT: api/Books/5
@@ -73,7 +91,7 @@ namespace BookService.Controllers.Api
         }
 
         // POST: api/Books
-        [ResponseType(typeof(Book))]
+        [ResponseType(typeof(BookDto))]
         public async Task<IHttpActionResult> PostBook(Book book)
         {
             if (!ModelState.IsValid)
@@ -84,7 +102,16 @@ namespace BookService.Controllers.Api
             db.Books.Add(book);
             await db.SaveChangesAsync();
 
-            return CreatedAtRoute("DefaultApi", new { id = book.Id }, book);
+            db.Entry(book).Reference(x => x.Author).Load();
+
+            var dto = new BookDto()
+            {
+                Id = book.Id,
+                Title = book.Title,
+                AuthorName = book.Author.Name
+            };
+
+            return CreatedAtRoute("DefaultApi", new { id = book.Id }, dto);
         }
 
         // DELETE: api/Books/5
