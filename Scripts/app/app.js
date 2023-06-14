@@ -4,6 +4,7 @@ var viewModel = function () {
     let self = this;
     self.books = ko.observableArray();
     self.error = ko.observable();
+    self.detail = ko.observable();
 
     var booksUri = '/api/books/';
 
@@ -30,6 +31,12 @@ var viewModel = function () {
 
     // fetches initial data
     getAllBooks();
+
+    self.getBookDetail = function (item) {
+        ajaxHelper(booksUri + item.Id, 'GET').done(function (data) {
+            self.detail(data);
+        });
+    }
 };
 
 ko.applyBindings(new viewModel());
