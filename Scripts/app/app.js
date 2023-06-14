@@ -1,12 +1,35 @@
 ﻿/// <reference path="../knockout-3.5.1.js" />
 
-import IndexVM from "./viewmodels/indexVM.js";
+var viewModel = function () {
+    let self = this;
+    self.books = ko.observableArray();
+    self.error = ko.observable();
 
-// The main entry point into the client side application
+    var booksUri = '/api/books/';
 
-let index = IndexVM();
+    function ajaxHelper(uri, method, data) {
+        self.error(''); // clears error message
+        return $.ajax({
+            type: method,
+            url: uri,
+            dataType: 'json',
+            contentType: 'application/json',
+            data: data
+                ? JSON.stringify(data)
+                : null
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            self.error(errorThrown);
+        });
+    }
 
-// fetches initial data
-index.getAllBooks();
+    function getAllBooks() {
+        ajaxHelper(booksUri, 'GET').done(function (data) {
+            self.books(data);
+        });
+    }
 
-ko.applyBindings(index);
+    // fetches initial data
+    getAllBooks();
+};
+
+ko.applyBindings(new viewModel());
